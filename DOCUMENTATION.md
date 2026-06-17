@@ -135,6 +135,30 @@ taskflow/
 
 ---
 
+### RF010 — Buscar Tarefas
+
+**Descrição:** O sistema deve permitir que o usuário busque tarefas por texto.
+
+**Critérios de aceitação:**
+- Um campo de busca deve estar disponível acima da lista de tarefas.
+- O campo de busca deve filtrar as tarefas em tempo real conforme o usuário digita.
+- A busca deve ser case-insensitive (não diferencia maiúsculas e minúsculas).
+- O campo de busca deve ser limpo ao recarregar a página.
+
+---
+
+### RF011 — Duplicar Tarefa
+
+**Descrição:** O sistema deve permitir que o usuário duplique uma tarefa existente.
+
+**Critérios de aceitação:**
+- O botão de duplicar (⧉) é exibido ao passar o cursor sobre a tarefa.
+- A tarefa duplicada deve ser adicionada logo abaixo da tarefa original.
+- A tarefa duplicada deve ter um novo identificador único.
+- A tarefa duplicada deve ter o mesmo texto da original, mas deve ser marcada como não concluída.
+
+---
+
 ## Regras de Negócio
 
 | ID    | Regra                                                                              |
