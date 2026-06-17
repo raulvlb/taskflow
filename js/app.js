@@ -8,7 +8,6 @@ const taskForm     = document.getElementById('taskForm');
 const taskInput    = document.getElementById('taskInput');
 const taskList     = document.getElementById('taskList');
 const taskCount    = document.getElementById('taskCount');
-const clearBtn     = document.getElementById('clearCompleted');
 const editModal    = document.getElementById('editModal');
 const editInput    = document.getElementById('editInput');
 const saveEditBtn  = document.getElementById('saveEdit');
@@ -30,12 +29,6 @@ taskForm.addEventListener('submit', e => {
   addTask(text);
   taskInput.value = '';
   taskInput.focus();
-});
-
-clearBtn.addEventListener('click', () => {
-  tasks = tasks.filter(t => !t.completed);
-  saveTasks();
-  render();
 });
 
 saveEditBtn.addEventListener('click', saveEdit);
@@ -147,7 +140,6 @@ function render() {
 function updateFooter() {
   const pending = tasks.filter(t => !t.completed).length;
   taskCount.textContent = `${pending} tarefa${pending !== 1 ? 's' : ''} pendente${pending !== 1 ? 's' : ''}`;
-  clearBtn.style.display = tasks.some(t => t.completed) ? 'inline-block' : 'none';
 }
 
 function escapeHtml(str) {
