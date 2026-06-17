@@ -1,0 +1,173 @@
+const STORAGE_KEY = 'taskflow_tasks';
+
+let tasks = loadTasks();
+let currentFilter = 'all';
+let editingId = null;
+
+const taskForm     = document.getElementById('taskForm');
+const taskInput    = document.getElementById('taskInput');
+const taskList     = document.getElementById('taskList');
+const taskCount    = document.getElementById('taskCount');
+const clearBtn     = document.getElementById('clearCompleted');
+const editModal    = document.getElementById('editModal');
+const editInput    = document.getElementById('editInput');
+const saveEditBtn  = document.getElementById('saveEdit');
+const cancelEditBtn = document.getElementById('cancelEdit');
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentFilter = btn.dataset.filter;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+});
+
+taskForm.addEventListener('submit', e => {
+  e.preventDefault();
+  const text = taskInput.value.trim();
+  if (!text) return;
+  addTask(text);
+  taskInput.value = '';
+  taskInput.focus();
+});
+
+clearBtn.addEventListener('click', () => {
+  tasks = tasks.filter(t => !t.completed);
+  saveTasks();
+  render();
+});
+
+saveEditBtn.addEventListener('click', saveEdit);
+cancelEditBtn.addEventListener('click', closeModal);
+
+editModal.addEventListener('click', e => {
+  if (e.target === editModal) closeModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && !editModal.classList.contains('hidden')) saveEdit();
+});
+
+function addTask(text) {
+  const task = {
+    id: Date.now(),
+    text,
+    completed: false,
+    createdAt: new Date().toISOString(),
+  };
+  tasks.unshift(task);
+  saveTasks();
+  render();
+}
+
+function toggleTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (task) {
+    task.completed = !task.completed;
+    saveTasks();
+    render();
+  }
+}
+
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  saveTasks();
+  render();
+}
+
+function openEditModal(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  editingId = id;
+  editInput.value = task.text;
+  editModal.classList.remove('hidden');
+  editInput.focus();
+  editInput.select();
+}
+
+function saveEdit() {
+  const newText = editInput.value.trim();
+  if (!newText || !editingId) return;
+  const task = tasks.find(t => t.id === editingId);
+  if (task) {
+    task.text = newText;
+    saveTasks();
+    render();
+  }
+  closeModal();
+}
+
+function closeModal() {
+  editModal.classList.add('hidden');
+  editingId = null;
+  editInput.value = '';
+}
+
+function getFilteredTasks() {
+  if (currentFilter === 'active')    return tasks.filter(t => !t.completed);
+  if (currentFilter === 'completed') return tasks.filter(t => t.completed);
+  return tasks;
+}
+
+function render() {
+  const filtered = getFilteredTasks();
+
+  taskList.innerHTML = '';
+
+  filtered.forEach(task => {
+    const li = document.createElement('li');
+    li.className = `task-item${task.completed ? ' completed' : ''}`;
+    li.dataset.id = task.id;
+
+    li.innerHTML = `
+      <button class="task-checkbox${task.completed ? ' checked' : ''}" aria-label="Concluir tarefa" data-action="toggle"></button>
+      <span class="task-text">${escapeHtml(task.text)}</span>
+      <div class="task-actions">
+        <button class="icon-btn edit" aria-label="Editar" data-action="edit">✏️</button>
+        <button class="icon-btn delete" aria-label="Excluir" data-action="delete">🗑️</button>
+      </div>
+    `;
+
+    li.addEventListener('click', e => {
+      const id = Number(li.dataset.id);
+      const action = e.target.closest('[data-action]')?.dataset.action;
+      if (action === 'toggle') toggleTask(id);
+      else if (action === 'edit')   openEditModal(id);
+      else if (action === 'delete') deleteTask(id);
+    });
+
+    taskList.appendChild(li);
+  });
+
+  updateFooter();
+}
+
+function updateFooter() {
+  const pending = tasks.filter(t => !t.completed).length;
+  taskCount.textContent = `${pending} tarefa${pending !== 1 ? 's' : ''} pendente${pending !== 1 ? 's' : ''}`;
+  clearBtn.style.display = tasks.some(t => t.completed) ? 'inline-block' : 'none';
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function loadTasks() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveTasks() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+render();
