@@ -2,15 +2,17 @@ const STORAGE_KEY = 'taskflow_tasks';
 
 let tasks = loadTasks();
 let currentFilter = 'all';
+let searchQuery = '';
 let editingId = null;
 
-const taskForm     = document.getElementById('taskForm');
-const taskInput    = document.getElementById('taskInput');
-const taskList     = document.getElementById('taskList');
-const taskCount    = document.getElementById('taskCount');
-const editModal    = document.getElementById('editModal');
-const editInput    = document.getElementById('editInput');
-const saveEditBtn  = document.getElementById('saveEdit');
+const taskForm      = document.getElementById('taskForm');
+const taskInput     = document.getElementById('taskInput');
+const taskList      = document.getElementById('taskList');
+const taskCount     = document.getElementById('taskCount');
+const searchInput   = document.getElementById('searchInput');
+const editModal     = document.getElementById('editModal');
+const editInput     = document.getElementById('editInput');
+const saveEditBtn   = document.getElementById('saveEdit');
 const cancelEditBtn = document.getElementById('cancelEdit');
 
 document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -20,6 +22,11 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.classList.add('active');
     render();
   });
+});
+
+searchInput.addEventListener('input', () => {
+  searchQuery = searchInput.value.trim().toLowerCase();
+  render();
 });
 
 taskForm.addEventListener('submit', e => {
@@ -99,9 +106,11 @@ function closeModal() {
 }
 
 function getFilteredTasks() {
-  if (currentFilter === 'active')    return tasks.filter(t => !t.completed);
-  if (currentFilter === 'completed') return tasks.filter(t => t.completed);
-  return tasks;
+  let result = tasks;
+  if (currentFilter === 'active')    result = result.filter(t => !t.completed);
+  if (currentFilter === 'completed') result = result.filter(t => t.completed);
+  if (searchQuery) result = result.filter(t => t.text.toLowerCase().includes(searchQuery));
+  return result;
 }
 
 function render() {
