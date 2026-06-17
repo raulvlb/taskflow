@@ -4,6 +4,7 @@ on:
   pull_request:
     branches: [master]
     types: [closed]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -13,7 +14,7 @@ jobs:
   update-docs:
     name: Analyze merged PR and update DOCUMENTATION.md
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
 
     steps:
       - name: Checkout master
@@ -22,22 +23,29 @@ jobs:
           ref: master
           fetch-depth: 0
 
-      - name: Get diff of merged changes (excluding DOCUMENTATION.md)
+      - name: Get diff
         id: diff
         run: |
-          BASE="${{ github.event.pull_request.base.sha }}"
-          HEAD="${{ github.event.pull_request.head.sha }}"
-
-          git diff "$BASE"..."$HEAD" \
-            -- . ':(exclude)DOCUMENTATION.md' \
-            | head -c 8000 > /tmp/pr_diff.txt
-
-          if [ -s /tmp/pr_diff.txt ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual run: diff the last commit on master to capture recent changes
+            git diff HEAD~1...HEAD \
+              -- . ':(exclude)DOCUMENTATION.md' \
+              | head -c 8000 > /tmp/pr_diff.txt
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
-            echo "Code changes found — proceeding with doc update."
+            echo "Manual run — using last commit as diff."
           else
-            echo "has_changes=false" >> "$GITHUB_OUTPUT"
-            echo "No code changes — skipping doc update."
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+            git diff "$BASE"..."$HEAD" \
+              -- . ':(exclude)DOCUMENTATION.md' \
+              | head -c 8000 > /tmp/pr_diff.txt
+            if [ -s /tmp/pr_diff.txt ]; then
+              echo "has_changes=true" >> "$GITHUB_OUTPUT"
+              echo "Code changes found — proceeding with doc update."
+            else
+              echo "has_changes=false" >> "$GITHUB_OUTPUT"
+              echo "No code changes — skipping doc update."
+            fi
           fi
 
       - name: Update documentation via GitHub Models
