@@ -1,10 +1,10 @@
 """
-Reads the PR diff and the current DOCUMENTATION.md,
-calls the GitHub Models API (powered by GitHub Copilot infrastructure),
-and writes the updated documentation back.
+Reads the PR diff, the current DOCUMENTATION.md, and all source code files,
+then calls the GitHub Models API to produce an updated documentation that
+reflects additions, modifications, AND deletions in the codebase.
 
 Required env vars:
-  GITHUB_TOKEN  — automatically provided by GitHub Actions (no extra secret needed)
+  GITHUB_TOKEN  — automatically provided by GitHub Actions
   DIFF_FILE     — path to the file containing the git diff (default: /tmp/pr_diff.txt)
 """
 
@@ -16,6 +16,7 @@ import urllib.request
 
 GITHUB_MODELS_API = "https://models.inference.ai.azure.com/chat/completions"
 DOCS_FILE = "DOCUMENTATION.md"
+SOURCE_FILES = ["index.html", "js/app.js", "css/style.css"]
 
 
 def main() -> None:
@@ -35,7 +36,8 @@ def main() -> None:
     with open(DOCS_FILE, encoding="utf-8") as f:
         current_docs = f.read()
 
-    prompt = _build_prompt(current_docs, diff)
+    source_snapshot = _read_source_files()
+    prompt = _build_prompt(current_docs, diff, source_snapshot)
     updated_docs = _call_github_models(token, prompt)
 
     with open(DOCS_FILE, "w", encoding="utf-8") as f:
@@ -44,20 +46,37 @@ def main() -> None:
     print("DOCUMENTATION.md updated successfully.")
 
 
-def _build_prompt(current_docs: str, diff: str) -> str:
+def _read_source_files() -> str:
+    parts = []
+    for path in SOURCE_FILES:
+        if os.path.exists(path):
+            with open(path, encoding="utf-8", errors="replace") as f:
+                content = f.read()
+            parts.append(f"### {path}\n```\n{content}\n```")
+    return "\n\n".join(parts)
+
+
+def _build_prompt(current_docs: str, diff: str, source_snapshot: str) -> str:
     return (
         "You are a senior technical writer specializing in software documentation.\n\n"
-        "Update the DOCUMENTATION.md below based on the pull request code changes.\n\n"
-        "Rules:\n"
-        "- ADD new functional requirements (RF00X) for new features — continue the existing numbering\n"
-        "- UPDATE existing requirements whose described behavior was modified by the diff\n"
-        "- REMOVE requirements that correspond to functionality deleted in the diff\n"
-        "- Keep all non-RF sections (Overview, Technologies, File Structure, Business Rules,"
-        " How to Run, License) intact unless directly impacted by the changes\n"
-        "- Preserve the exact Markdown formatting, table styles, and heading hierarchy\n"
-        "- Return ONLY the complete updated DOCUMENTATION.md — no explanations, no code fences\n\n"
-        f"## Current DOCUMENTATION.md:\n{current_docs}\n\n"
-        f"## Pull request diff (code changes only):\n```diff\n{diff}\n```\n\n"
+        "You have three inputs:\n"
+        "1. The CURRENT DOCUMENTATION.md with existing functional requirements (RFs)\n"
+        "2. The GIT DIFF of the latest pull request (shows what changed)\n"
+        "3. The COMPLETE CURRENT SOURCE CODE (ground truth of what actually exists)\n\n"
+        "Your task: produce a fully updated DOCUMENTATION.md.\n\n"
+        "Rules — follow ALL of them strictly:\n"
+        "- CROSS-REFERENCE every existing RF against the current source code.\n"
+        "  If the feature described by an RF no longer exists in the code, REMOVE that RF.\n"
+        "- ADD new RFs for features introduced in the diff that are not yet documented.\n"
+        "  Continue the existing RF numbering (e.g. if the last is RF009, next is RF010).\n"
+        "- UPDATE existing RFs whose described behavior was modified by the diff.\n"
+        "- Keep all non-RF sections (Overview, Technologies, File Structure, Business Rules,\n"
+        "  How to Run, License) intact unless directly impacted.\n"
+        "- Preserve the exact Markdown formatting, table styles, and heading hierarchy.\n"
+        "- Return ONLY the complete updated DOCUMENTATION.md — no explanations, no code fences.\n\n"
+        f"## 1. Current DOCUMENTATION.md:\n{current_docs}\n\n"
+        f"## 2. Git diff of the pull request:\n```diff\n{diff}\n```\n\n"
+        f"## 3. Complete current source code:\n{source_snapshot}\n\n"
         "Return the complete updated DOCUMENTATION.md:"
     )
 
