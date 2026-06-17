@@ -123,6 +123,18 @@ taskflow/
 
 ---
 
+### RF009 — Marcar Todas as Tarefas
+
+**Descrição:** O sistema deve permitir que o usuário marque ou desmarque todas as tarefas da lista de uma só vez.
+
+**Critérios de aceitação:**
+- O botão "Marcar todas" é exibido no rodapé da lista quando há tarefas cadastradas.
+- Se todas as tarefas estiverem marcadas como concluídas, o botão exibe "Desmarcar todas" e, ao ser clicado, desmarca todas as tarefas.
+- Se houver ao menos uma tarefa não concluída, o botão exibe "Marcar todas" e, ao ser clicado, marca todas as tarefas como concluídas.
+- O botão não é exibido se não houver tarefas na lista.
+
+---
+
 ## Regras de Negócio
 
 | ID    | Regra                                                                              |
