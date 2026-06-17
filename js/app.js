@@ -77,6 +77,16 @@ function deleteTask(id) {
   render();
 }
 
+function duplicateTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  const copy = { id: Date.now(), text: task.text, completed: false, createdAt: new Date().toISOString() };
+  const index = tasks.findIndex(t => t.id === id);
+  tasks.splice(index + 1, 0, copy);
+  saveTasks();
+  render();
+}
+
 function openEditModal(id) {
   const task = tasks.find(t => t.id === id);
   if (!task) return;
@@ -127,6 +137,7 @@ function render() {
       <button class="task-checkbox${task.completed ? ' checked' : ''}" aria-label="Concluir tarefa" data-action="toggle"></button>
       <span class="task-text">${escapeHtml(task.text)}</span>
       <div class="task-actions">
+        <button class="icon-btn duplicate" aria-label="Duplicar" data-action="duplicate">⧉</button>
         <button class="icon-btn edit" aria-label="Editar" data-action="edit">✏️</button>
         <button class="icon-btn delete" aria-label="Excluir" data-action="delete">🗑️</button>
       </div>
@@ -135,9 +146,10 @@ function render() {
     li.addEventListener('click', e => {
       const id = Number(li.dataset.id);
       const action = e.target.closest('[data-action]')?.dataset.action;
-      if (action === 'toggle') toggleTask(id);
-      else if (action === 'edit')   openEditModal(id);
-      else if (action === 'delete') deleteTask(id);
+      if (action === 'toggle')         toggleTask(id);
+      else if (action === 'duplicate') duplicateTask(id);
+      else if (action === 'edit')      openEditModal(id);
+      else if (action === 'delete')    deleteTask(id);
     });
 
     taskList.appendChild(li);
