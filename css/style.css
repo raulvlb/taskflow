@@ -120,15 +120,6 @@ body {
 
 .btn-mark-all:hover { background: rgba(99, 102, 241, 0.1); }
 
-.btn-clear {
-  background: transparent;
-  color: var(--danger);
-  font-size: 0.85rem;
-  padding: 6px 10px;
-}
-
-.btn-clear:hover { background: rgba(239, 68, 68, 0.1); }
-
 .btn-cancel {
   background: var(--surface-2);
   color: var(--text);
