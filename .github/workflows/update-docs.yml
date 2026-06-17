@@ -1,34 +1,33 @@
 name: Auto-update Docs via GitHub Models
 
 on:
-  pull_request_review:
-    types: [submitted]
+  pull_request:
+    branches: [master]
+    types: [closed]
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   update-docs:
-    name: Analyze PR and update DOCUMENTATION.md
+    name: Analyze merged PR and update DOCUMENTATION.md
     runs-on: ubuntu-latest
-    # Only run when the PR targets master AND the review is an approval
-    if: |
-      github.event.review.state == 'approved' &&
-      github.event.pull_request.base.ref == 'master'
+    if: github.event.pull_request.merged == true
 
     steps:
-      - name: Checkout PR branch
+      - name: Checkout master
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: master
           fetch-depth: 0
 
-      - name: Get code diff (excluding DOCUMENTATION.md)
+      - name: Get diff of merged changes (excluding DOCUMENTATION.md)
         id: diff
         run: |
-          git fetch origin master --depth=100
-          git diff origin/master...HEAD \
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          git diff "$BASE"..."$HEAD" \
             -- . ':(exclude)DOCUMENTATION.md' \
             | head -c 8000 > /tmp/pr_diff.txt
 
@@ -37,17 +36,17 @@ jobs:
             echo "Code changes found — proceeding with doc update."
           else
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
-            echo "No code changes detected — skipping doc update."
+            echo "No code changes — skipping doc update."
           fi
 
-      - name: Update documentation via GitHub Models (Copilot)
+      - name: Update documentation via GitHub Models
         if: steps.diff.outputs.has_changes == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIFF_FILE: /tmp/pr_diff.txt
         run: python3 .github/scripts/update_docs.py
 
-      - name: Commit updated documentation
+      - name: Commit updated documentation to master
         if: steps.diff.outputs.has_changes == 'true'
         run: |
           git config user.name "github-actions[bot]"
@@ -57,5 +56,5 @@ jobs:
             echo "Documentation already up to date — nothing to commit."
           else
             git commit -m "docs: auto-update DOCUMENTATION.md via GitHub Models [skip ci]"
-            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+            git push origin master
           fi
