@@ -111,6 +111,15 @@ body {
 
 .btn-add:hover { background: var(--accent-hover); }
 
+.btn-mark-all {
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.85rem;
+  padding: 6px 10px;
+}
+
+.btn-mark-all:hover { background: rgba(99, 102, 241, 0.1); }
+
 .btn-clear {
   background: transparent;
   color: var(--danger);
