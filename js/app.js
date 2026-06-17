@@ -9,6 +9,7 @@ const taskForm      = document.getElementById('taskForm');
 const taskInput     = document.getElementById('taskInput');
 const taskList      = document.getElementById('taskList');
 const taskCount     = document.getElementById('taskCount');
+const markAllBtn    = document.getElementById('markAllBtn');
 const searchInput   = document.getElementById('searchInput');
 const editModal     = document.getElementById('editModal');
 const editInput     = document.getElementById('editInput');
@@ -73,6 +74,13 @@ function toggleTask(id) {
 
 function deleteTask(id) {
   tasks = tasks.filter(t => t.id !== id);
+  saveTasks();
+  render();
+}
+
+function markAll() {
+  const allDone = tasks.every(t => t.completed);
+  tasks.forEach(t => { t.completed = !allDone; });
   saveTasks();
   render();
 }
@@ -161,7 +169,12 @@ function render() {
 function updateFooter() {
   const pending = tasks.filter(t => !t.completed).length;
   taskCount.textContent = `${pending} tarefa${pending !== 1 ? 's' : ''} pendente${pending !== 1 ? 's' : ''}`;
+  const allDone = tasks.length > 0 && tasks.every(t => t.completed);
+  markAllBtn.textContent = allDone ? 'Desmarcar todas' : 'Marcar todas';
+  markAllBtn.style.display = tasks.length ? 'inline-block' : 'none';
 }
+
+markAllBtn.addEventListener('click', markAll);
 
 function escapeHtml(str) {
   return str
