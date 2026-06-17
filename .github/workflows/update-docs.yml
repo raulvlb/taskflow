@@ -1,9 +1,8 @@
-name: Auto-update Docs via Copilot
+name: Auto-update Docs via GitHub Models
 
 on:
-  pull_request:
-    branches: [master]
-    types: [opened, synchronize, reopened]
+  pull_request_review:
+    types: [submitted]
 
 permissions:
   contents: write
@@ -13,12 +12,16 @@ jobs:
   update-docs:
     name: Analyze PR and update DOCUMENTATION.md
     runs-on: ubuntu-latest
+    # Only run when the PR targets master AND the review is an approval
+    if: |
+      github.event.review.state == 'approved' &&
+      github.event.pull_request.base.ref == 'master'
 
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
       - name: Get code diff (excluding DOCUMENTATION.md)
@@ -37,10 +40,10 @@ jobs:
             echo "No code changes detected — skipping doc update."
           fi
 
-      - name: Update documentation via GitHub Copilot
+      - name: Update documentation via GitHub Models (Copilot)
         if: steps.diff.outputs.has_changes == 'true'
         env:
-          COPILOT_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIFF_FILE: /tmp/pr_diff.txt
         run: python3 .github/scripts/update_docs.py
 
@@ -53,6 +56,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "Documentation already up to date — nothing to commit."
           else
-            git commit -m "docs: auto-update DOCUMENTATION.md via GitHub Copilot [skip ci]"
-            git push origin HEAD:${{ github.head_ref }}
+            git commit -m "docs: auto-update DOCUMENTATION.md via GitHub Models [skip ci]"
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
           fi

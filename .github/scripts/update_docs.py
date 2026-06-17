@@ -1,10 +1,11 @@
 """
 Reads the PR diff and the current DOCUMENTATION.md,
-calls the GitHub Copilot API, and writes the updated documentation back.
+calls the GitHub Models API (powered by GitHub Copilot infrastructure),
+and writes the updated documentation back.
 
 Required env vars:
-  COPILOT_TOKEN  — GitHub PAT of an account with an active Copilot subscription
-  DIFF_FILE      — path to the file containing the git diff (default: /tmp/pr_diff.txt)
+  GITHUB_TOKEN  — automatically provided by GitHub Actions (no extra secret needed)
+  DIFF_FILE     — path to the file containing the git diff (default: /tmp/pr_diff.txt)
 """
 
 import json
@@ -13,14 +14,14 @@ import sys
 import urllib.error
 import urllib.request
 
-COPILOT_API = "https://api.githubcopilot.com/chat/completions"
+GITHUB_MODELS_API = "https://models.inference.ai.azure.com/chat/completions"
 DOCS_FILE = "DOCUMENTATION.md"
 
 
 def main() -> None:
-    token = os.environ.get("COPILOT_TOKEN", "").strip()
+    token = os.environ.get("GITHUB_TOKEN", "").strip()
     if not token:
-        print("::error::COPILOT_TOKEN secret is not set.", file=sys.stderr)
+        print("::error::GITHUB_TOKEN is not available.", file=sys.stderr)
         sys.exit(1)
 
     diff_file = os.environ.get("DIFF_FILE", "/tmp/pr_diff.txt")
@@ -35,7 +36,7 @@ def main() -> None:
         current_docs = f.read()
 
     prompt = _build_prompt(current_docs, diff)
-    updated_docs = _call_copilot(token, prompt)
+    updated_docs = _call_github_models(token, prompt)
 
     with open(DOCS_FILE, "w", encoding="utf-8") as f:
         f.write(updated_docs + "\n")
@@ -61,7 +62,7 @@ def _build_prompt(current_docs: str, diff: str) -> str:
     )
 
 
-def _call_copilot(token: str, prompt: str) -> str:
+def _call_github_models(token: str, prompt: str) -> str:
     payload = json.dumps(
         {
             "model": "gpt-4o",
@@ -72,13 +73,11 @@ def _call_copilot(token: str, prompt: str) -> str:
     ).encode()
 
     req = urllib.request.Request(
-        COPILOT_API,
+        GITHUB_MODELS_API,
         data=payload,
         headers={
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
-            "Editor-Version": "vscode/1.90.0",
-            "Copilot-Integration-Id": "vscode-chat",
         },
         method="POST",
     )
@@ -88,7 +87,7 @@ def _call_copilot(token: str, prompt: str) -> str:
             data = json.loads(resp.read())
     except urllib.error.HTTPError as e:
         body = e.read().decode()
-        print(f"::error::Copilot API returned {e.code}: {body}", file=sys.stderr)
+        print(f"::error::GitHub Models API returned {e.code}: {body}", file=sys.stderr)
         sys.exit(1)
 
     content = data["choices"][0]["message"]["content"].strip()
